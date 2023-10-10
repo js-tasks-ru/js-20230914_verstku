@@ -14,45 +14,42 @@ export default class ColumnChart {
     this.value = value;
     this.link = link;
     this.formatHeading = formatHeading;
-    this.element = this.render();
+
+    this.element = this.createElement();
+    this.syncChartLoadingStatus();
     this.dataElements = this.getDataElements();
   }
 
-  getTemplate() {
+  createTemplate() {
     return `
     <div class="column-chart" style="--chart-height: ${this.chartHeight}">
       <div class="column-chart__title">
         Total ${this.label}
-        ${this.getLinkTemplate()}
+        ${this.createLinkTemplate()}
       </div>
       <div class="column-chart__container">
         <div data-element="header" class="column-chart__header">${this.formatHeading(this.value.toLocaleString('en-US'))}</div>
         <div data-element="body" class="column-chart__chart">
-          ${this.getChartTemplate()}
+          ${this.createChartTemplate()}
         </div>
       </div>
     `;
   }
 
-  getLinkTemplate() {
+  createLinkTemplate() {
     return this.link
       ? `<a href="${this.link}" class="column-chart__link">View all</a>`
       : '';
   }
 
-  getChartTemplate() {
+  createChartTemplate() {
     if(!this.data.length) return '';
 
-    let chartTemplate = '';
     const chartProps = this.getColumnProps(this.data);
 
-    chartProps.forEach(({value, percent}) => {
-      chartTemplate += `
-      <div style="--value: ${value}" data-tooltip="${percent}"></div>
-      `;
-    });
-
-    return chartTemplate;
+    return chartProps
+      .reduce((acc, {value, percent}) =>
+        acc + `<div style="--value: ${value}" data-tooltip="${percent}"></div>`, '');
   }
 
 
@@ -68,17 +65,18 @@ export default class ColumnChart {
     });
   }
 
-  render() {
+  syncChartLoadingStatus() {
+    if(!this.data.length) {
+      this.element.classList.add('column-chart_loading');
+    }
+  }
+
+  createElement() {
     const element = document.createElement("div"); // (*)
 
-    element.innerHTML = this.getTemplate();
-    const columnChartElement = element.firstElementChild;
+    element.innerHTML = this.createTemplate();
 
-    if(!this.data.length) {
-      columnChartElement.classList.add('column-chart_loading');
-    }
-
-    return columnChartElement;
+    return element.firstElementChild;
   }
 
   getDataElements() {
@@ -94,12 +92,10 @@ export default class ColumnChart {
   }
 
   update(data = []) {
-    if (!data.length) {
-      this.element.classList.add('column-chart_loading');
-    }
-
     this.data = data;
-    this.dataElements.body.innerHTML = this.getChartTemplate();
+    this.syncChartLoadingStatus()
+
+    this.dataElements.body.innerHTML = this.createChartTemplate();
   }
 
   remove() {
