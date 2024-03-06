@@ -43,10 +43,7 @@ export default class NotificationMessage {
     this.constructor.currentNotification =  this.element;
 
     nodeContainer.append(this.element);
-    let timerId = setTimeout(() => {
-      this.destroy(timerId);
-      timerId = null;
-    }, this.duration);
+    this.timerID = setTimeout(() => this.destroy(), this.duration);
 
   }
 
@@ -56,9 +53,10 @@ export default class NotificationMessage {
     }
   }
 
-  destroy(hideTimeoutId) {
+  destroy() {
     this.remove();
     this.element = null;
-    clearTimeout(hideTimeoutId);
+    clearTimeout(this.timerID);
+    this.timerID = null;
   }
 }
