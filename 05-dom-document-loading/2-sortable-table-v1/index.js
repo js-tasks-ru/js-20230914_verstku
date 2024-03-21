@@ -1,7 +1,6 @@
 export default class SortableTable {
   element;
   subElements = {};
-  columnIDs = [];
 
   constructor(headerConfig = [], data = []) {
     this.headerConfig = headerConfig;
@@ -13,7 +12,7 @@ export default class SortableTable {
   createHeaderCells() {
     return this.headerConfig
       .map(item => `
-        <div class="sortable-table__cell" data-id="${item.id}" data-sortable="${item.sortable}">
+        <div class="sortable-table__cell" data-id="${item.id}" data-sortable="${item.sortable}" data-order="">
           <span>${item.title}</span>
         </div>
       `)
@@ -38,6 +37,30 @@ export default class SortableTable {
       .join('');
   }
 
+  createArrowNode() {
+    const wrapper = document.createElement('div');
+
+    wrapper.innerHTML = `
+      <span data-element="arrow" class="sortable-table__sort-arrow">
+        <span class="sort-arrow"></span>
+      </span>
+    `;
+
+    return wrapper.firstElementChild;
+  }
+
+  addArrowToHeaderCell(cellIndex, order) {
+    const headerCells = this.subElements.header.querySelectorAll('.sortable-table__cell');
+    const targetCell = headerCells[cellIndex];
+
+    for (const cell of headerCells) {
+      cell.dataset.order = '';
+    }
+
+    targetCell.dataset.order = order;
+    targetCell.append(this.subElements.arrow);
+  }
+
   get template() {
     return `
       <div class="sortable-table">
@@ -59,8 +82,6 @@ export default class SortableTable {
     this.element = wrapper.firstElementChild;
 
     this.subElements = this.getSubElements(this.element);
-
-    this.columnIDs = this.getColumnIDs();
   }
 
   getSubElements(element) {
@@ -72,13 +93,18 @@ export default class SortableTable {
       result[nameElement] = subElement;
     }
 
+    result.arrow = this.createArrowNode();
+
     return result;
   }
 
   sort(field, order) {
-    const fieldIndex = this.columnIDs.indexOf(field);
-    const columnConfig = this.headerConfig[fieldIndex];
+    const columnIDs = this.headerConfig.map(item => item.id);
+    const fieldIndex = columnIDs.indexOf(field);
+    const targetColumnConfig = this.headerConfig[fieldIndex];
     const getRows = this.subElements.body.querySelectorAll('.sortable-table__row');
+
+    this.addArrowToHeaderCell(fieldIndex, order);
 
     const directions = {
       asc: 1,
@@ -92,9 +118,7 @@ export default class SortableTable {
       const cellA = rowA.querySelectorAll('.sortable-table__cell')[fieldIndex];
       const cellB = rowB.querySelectorAll('.sortable-table__cell')[fieldIndex];
 
-
-
-      switch (columnConfig?.sortType) {
+      switch (targetColumnConfig?.sortType) {
         case 'string':
           return direction * cellA.innerHTML.localeCompare(cellB.innerHTML, ['ru', 'en'], { caseFirst: 'upper' });
         case 'number':
@@ -103,10 +127,6 @@ export default class SortableTable {
     });
 
     this.subElements.body.append(...sortedRows);
-  }
-
-  getColumnIDs() {
-    return this.headerConfig.map(item => item.id);
   }
 
   remove() {
@@ -119,7 +139,6 @@ export default class SortableTable {
     this.remove();
     this.element = null;
     this.subElements = {};
-    this.columnIDs = [];
   }
 }
 
