@@ -22,7 +22,7 @@ export default class SortableTable {
   createBodyCells(productData) {
     return this.headerConfig
       .map(item => item.template ?
-        item.template() :
+        item.template(productData[item.id]) :
         `<div class="sortable-table__cell">${productData[item.id]}</div>`)
       .join('');
   }
@@ -49,9 +49,9 @@ export default class SortableTable {
     return wrapper.firstElementChild;
   }
 
-  addArrowToHeaderCell(cellIndex, order) {
+  addArrowToHeaderCell(cellID, order) {
     const headerCells = this.subElements.header.querySelectorAll('.sortable-table__cell');
-    const targetCell = headerCells[cellIndex];
+    const targetCell = this.subElements.header.querySelector(`[data-id="${cellID}"]`);
 
     for (const cell of headerCells) {
       cell.dataset.order = '';
@@ -99,12 +99,15 @@ export default class SortableTable {
   }
 
   sort(field, order) {
-    const columnIDs = this.headerConfig.map(item => item.id);
-    const fieldIndex = columnIDs.indexOf(field);
-    const targetColumnConfig = this.headerConfig[fieldIndex];
-    const getRows = this.subElements.body.querySelectorAll('.sortable-table__row');
+    let sortType = '';
 
-    this.addArrowToHeaderCell(fieldIndex, order);
+    for (const item of this.headerConfig) {
+      if (item.id === field) {
+        sortType = item?.sortType;
+      }
+    }
+
+    this.addArrowToHeaderCell(field, order);
 
     const directions = {
       asc: 1,
@@ -113,20 +116,20 @@ export default class SortableTable {
 
     const direction = directions[order];
 
-    const sortedRows = Array.from(getRows)
-      .sort((rowA, rowB) => {
-      const cellA = rowA.querySelectorAll('.sortable-table__cell')[fieldIndex];
-      const cellB = rowB.querySelectorAll('.sortable-table__cell')[fieldIndex];
+    this.data
+      .sort((productA, productB) => {
+        const valueA = productA[field];
+        const valueB = productB[field];
 
-      switch (targetColumnConfig?.sortType) {
-        case 'string':
-          return direction * cellA.innerHTML.localeCompare(cellB.innerHTML, ['ru', 'en'], { caseFirst: 'upper' });
-        case 'number':
-          return direction * (cellA.innerHTML - cellB.innerHTML);
-      }
-    });
+        switch (sortType) {
+          case 'string':
+            return direction * valueA.localeCompare(valueB, ['ru', 'en'], { caseFirst: 'upper' });
+          case 'number':
+            return direction * (valueA - valueB);
+        }
+      });
 
-    this.subElements.body.append(...sortedRows);
+    this.subElements.body.innerHTML = this.createBodyRows();
   }
 
   remove() {
