@@ -19,6 +19,16 @@ export default class SortableTable {
       .join('');
   }
 
+  createBodyRows(data = []) {
+    return data
+      .map(item => `
+        <a href="/products/${item.id}" class="sortable-table__row">
+          ${this.createBodyCells(item)}
+        </a>
+      `)
+      .join('');
+  }
+
   createBodyCells(productData) {
     return this.headerConfig
       .map(item => item.template ?
@@ -27,26 +37,56 @@ export default class SortableTable {
       .join('');
   }
 
-  createBodyRows() {
-    return this.data
-      .map(item => `
-        <div class="sortable-table__row">
-          ${this.createBodyCells(item)}
+  get template() {
+    return `
+      <div class="sortable-table">
+        <div data-element="header" class="sortable-table__header sortable-table__row">
+          ${this.createHeaderCells()}
         </div>
-      `)
-      .join('');
+        <div data-element="body" class="sortable-table__body">
+          ${this.createBodyRows(this.data)}
+        </div>
+      </div>
+    `;
   }
 
-  createArrowNode() {
+  render() {
     const wrapper = document.createElement('div');
 
-    wrapper.innerHTML = `
-      <span data-element="arrow" class="sortable-table__sort-arrow">
-        <span class="sort-arrow"></span>
-      </span>
-    `;
+    wrapper.innerHTML = this.template;
 
-    return wrapper.firstElementChild;
+    const element = wrapper.firstElementChild;
+
+    this.element = element;
+
+    this.subElements = this.getSubElements(element);
+  }
+
+  sort(field, order) {
+    const { sortType } = this.headerConfig.find(item => item.id === field);
+
+    this.addArrowToHeaderCell(field, order);
+
+    const directions = {
+      asc: 1,
+      desc: -1
+    };
+    const direction = directions[order];
+
+    const sortData= [...this.data]
+      .sort((productA, productB) => {
+        const valueA = productA[field];
+        const valueB = productB[field];
+
+        switch (sortType) {
+          case 'string':
+            return direction * valueA.localeCompare(valueB, ['ru', 'en'], { caseFirst: 'upper' });
+          case 'number':
+            return direction * (valueA - valueB);
+        }
+      });
+
+    this.subElements.body.innerHTML = this.createBodyRows(sortData);
   }
 
   addArrowToHeaderCell(cellID, order) {
@@ -61,29 +101,6 @@ export default class SortableTable {
     targetCell.append(this.subElements.arrow);
   }
 
-  get template() {
-    return `
-      <div class="sortable-table">
-        <div data-element="header" class="sortable-table__header sortable-table__row">
-          ${this.createHeaderCells()}
-        </div>
-        <div data-element="body" class="sortable-table__body">
-          ${this.createBodyRows()}
-        </div>
-      </div>
-    `;
-  }
-
-  render() {
-    const wrapper = document.createElement('div');
-
-    wrapper.innerHTML = this.template;
-
-    this.element = wrapper.firstElementChild;
-
-    this.subElements = this.getSubElements(this.element);
-  }
-
   getSubElements(element) {
     const result = {};
     const dataElements = element.querySelectorAll('[data-element]');
@@ -93,43 +110,21 @@ export default class SortableTable {
       result[nameElement] = subElement;
     }
 
-    result.arrow = this.createArrowNode();
+    result.arrow = this.createArrow();
 
     return result;
   }
 
-  sort(field, order) {
-    let sortType = '';
+  createArrow() {
+    const wrapper = document.createElement('div');
 
-    for (const item of this.headerConfig) {
-      if (item.id === field) {
-        sortType = item?.sortType;
-      }
-    }
+    wrapper.innerHTML = `
+      <span data-element="arrow" class="sortable-table__sort-arrow">
+        <span class="sort-arrow"></span>
+      </span>
+    `;
 
-    this.addArrowToHeaderCell(field, order);
-
-    const directions = {
-      asc: 1,
-      desc: -1
-    };
-
-    const direction = directions[order];
-
-    this.data
-      .sort((productA, productB) => {
-        const valueA = productA[field];
-        const valueB = productB[field];
-
-        switch (sortType) {
-          case 'string':
-            return direction * valueA.localeCompare(valueB, ['ru', 'en'], { caseFirst: 'upper' });
-          case 'number':
-            return direction * (valueA - valueB);
-        }
-      });
-
-    this.subElements.body.innerHTML = this.createBodyRows();
+    return wrapper.firstElementChild;
   }
 
   remove() {
