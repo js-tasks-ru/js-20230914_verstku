@@ -1,12 +1,10 @@
 export default class SortableTable {
-  element;
-  subElements = {};
-
   constructor(headerConfig = [], data = []) {
     this.headerConfig = headerConfig;
     this.data = data;
 
-    this.render();
+    this.element = this.createElement();
+    this.subElements = this.getSubElements(this.element);
   }
 
   createHeaderCells() {
@@ -50,16 +48,12 @@ export default class SortableTable {
     `;
   }
 
-  render() {
+  createElement() {
     const wrapper = document.createElement('div');
 
     wrapper.innerHTML = this.template;
 
-    const element = wrapper.firstElementChild;
-
-    this.element = element;
-
-    this.subElements = this.getSubElements(element);
+    return wrapper.firstElementChild;
   }
 
   sort(field, order) {
